@@ -1809,6 +1809,30 @@ element.addEventListener('input', () => {
 }
 
 
+cssText(styles, append = false) {
+    // If no styles argument, return current cssText
+    if (styles === undefined) {
+        return this.get(elem => elem.style.cssText);
+    } 
+    
+    // If append flag is true
+    else if (append) {
+        this.set(elem => {
+            let existing = elem.style.cssText;
+            if (existing && !existing.trim().endsWith(';')) existing += ';';
+            elem.style.cssText = existing + styles;
+        });
+    } 
+    
+    // Otherwise, replace all styles
+    else {
+        this.set(elem => {
+            elem.style.cssText = styles;
+        });
+    }
+
+    return new jUtils(this.element);; // Allow chaining
+};
 
 
 
@@ -1860,6 +1884,7 @@ try {
       console.error($.simulateErrorDetails(err));
   }
 }
+
 
 
 // Get error line location 
@@ -2639,36 +2664,43 @@ $.extend = function(target, ...args) {
 }
 
 
+// Custom formData utility 
+$.formData = (input, ...rest) => {
+try {
+    const fd = new FormData();
 
-// Custom FormData utility
-$.formData = (...args) => {
-  const fd = new FormData();
-
-  // If single object argument, append its keys
-  if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
-    const data = args[0];
-    Object.entries(data).forEach(([key, value]) => {
-      if (value instanceof File) {
-        fd.append(key, value);
-      } else if (Array.isArray(value)) {
-        value.forEach((item, index) => fd.append(`${key}[${index}]`, item));
-      } else {
-        fd.append(key, value);
-      }
-    });
-  } else {
-    // Handle key-value pairs passed as arguments
-    for (let i = 0; i < args.length; i += 2) {
-      const key = args[i];
-      const value = args[i + 1];
-      fd.append(key, value);
+    // Case 1: Object
+    if (typeof input === 'object' && input !== null) {
+        Object.entries(input).forEach(([key, value]) => {
+            if (value instanceof File) {
+                fd.append(key, value);
+            } else if (Array.isArray(value)) {
+                value.forEach((item, index) => fd.append(`${key}[${index}]`, item));
+            } else {
+                fd.append(key, value);
+            }
+        });
     }
-  }
+    // Case 2: Form ID
+    else if (typeof input === 'string' && rest.length === 0 && input) {
+        return new FormData(input);
+    }
+    // Case 3: Query string / key-value pairs
+    else if (typeof input === 'string' && rest.length >= 1) {
+        const keys = [input, ...rest.filter((_, i) => i % 2 === 0)];
+        const values = rest.filter((_, i) => i % 2 === 1);
+        if (keys.length !== values.length) throw new Error('Mismatched keys and values');
+        keys.forEach((key, i) => fd.append(key, values[i]));
+    }
+    else {
+        throw new Error('Unsupported input type for $.formData');
+    }
 
-  return fd;
+    return fd;
+    } catch (err) {
+console.error($.simulateErrorDetails(err));        
+    }
 };
-
-
 
 
 // Hash a string with optional pin
