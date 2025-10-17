@@ -1836,6 +1836,63 @@ cssText(styles, append = false) {
 };
 
 
+/**
+ * Observes how much a fixed element is covered by this scrollable element.
+ * Calls the callback on scroll and resize with an info object:
+ *   info.covered {Boolean}       - true if any part of fixed element is covered.
+ *   info.percent {Number}        - percentage (0-100) of fixed element height covered.
+ *   info.overlapHeight {Number}  - actual pixel height of the overlap.
+ */
+observeCover(fixedEl, callback) {
+  const self = this;
+
+  function checkCover() {
+    const a = fixedEl.getBoundingClientRect();
+    const b = self.get(el => el.getBoundingClientRect());
+
+    // compute overlap area vertically
+    const overlapTop = Math.max(a.top, b.top);
+    const overlapBottom = Math.min(a.bottom, b.bottom);
+    const overlapHeight = Math.max(overlapBottom - overlapTop, 0);
+
+    // normalize overlap to A's height (A = 100%)
+    const percent = Math.min(Math.max((overlapHeight / a.height) * 100, 0), 100);
+
+    callback({
+      covered: overlapHeight > 0,
+      percent,
+      overlapHeight
+    });
+  }
+
+  // smooth scroll performance
+  let ticking = false;
+  function onScroll() {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        checkCover();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }
+
+  // listen for changes
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', checkCover);
+
+  // run once initially
+  checkCover();
+
+  // optional cleanup return
+  return self.set(el => {
+    el._observeCoverStop = () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', checkCover);
+    };
+  });
+};
+
 
 
  
