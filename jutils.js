@@ -1677,8 +1677,9 @@ animateProgress(duration, config = () => {}) {
 }
 
 
-
-
+// 🔧 makeEditable(options):
+// Enables inline editing on an element with a custom placeholder and optional dynamic CSS styling.
+// Supports Tab key for new block creation and placeholder behavior using ::before.
 makeEditable(options) {
     this.set((element) => {
         // 1️⃣ Make element editable
@@ -1843,158 +1844,248 @@ cssText(styles, append = false) {
  
  
  // Counts how many times a specific character appears.
-$.charCount = function(element, char) {
-try {
-  const str = element?.toString() ?? '';
-  const escapedChar = char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(escapedChar, 'g');
-  return (str.match(regex) || []).length;
+$.charCount = function (element, char) {
+  try {
+    const str = element?.toString?.() ?? '';
+    const escapedChar = char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape safely
+    const regex = new RegExp(escapedChar, 'g');
+    return (str.match(regex) || []).length;
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+    console.error($.simulateErrorDetails(err));
+    return 0;
   }
-}
-
+};
 
 
 // Counts the number of characters in the string based on specified type.
-$.strCount = function(element, type) {
-try {
-  const str = element.toString();
+$.strCount = function (element, ...types) {
+  try {
+    const str = element?.toString?.() ?? "";
 
-  const typeMap = {
-    upper: str => (str.match(/[A-Z]/g) || []).length,    
-    uppercase: str => (str.match(/[A-Z]/g) || []).length,
-    lower: str => (str.match(/[a-z]/g) || []).length,   
-    lowercase: str => (str.match(/[a-z]/g) || []).length,
-    emoji: str => (str.match(/\p{Extended_Pictographic}/gu) || []).length,   
-    special: str => (str.match(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>?]/g) || []).length,    
-    specialcharacter: str => (str.match(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>?]/g) || []).length,
-    number: str => (str.match(/[0-9]/g) || []).length,
-    num: str => (str.match(/[0-9]/g) || []).length,    
-    alpha: str => (str.match(/[a-zA-Z]/g) || []).length,   
-    alphabet: str => (str.match(/[a-zA-Z]/g) || []).length
-  };
+    const typeMap = {
+      upper: s => (s.match(/[A-Z]/g) || []).length,
+      uppercase: s => (s.match(/[A-Z]/g) || []).length,
+      lower: s => (s.match(/[a-z]/g) || []).length,
+      lowercase: s => (s.match(/[a-z]/g) || []).length,
+      emoji: s => (s.match(/\p{Extended_Pictographic}/gu) || []).length,
+      special: s => (s.match(/[^a-zA-Z0-9\p{Extended_Pictographic}\u200d\s]/gu) || []).length,
+      specialcharacter: s => (s.match(/[^a-zA-Z0-9\p{Extended_Pictographic}\u200d\s]/gu) || []).length,
+      number: s => (s.match(/[0-9]/g) || []).length,
+      num: s => (s.match(/[0-9]/g) || []).length,
+      alpha: s => (s.match(/[a-zA-Z]/g) || []).length,
+      alphabet: s => (s.match(/[a-zA-Z]/g) || []).length,
+    };
 
-  if (!typeMap[type]) {
-    throw new TypeError(`Invalid character type specified: "${type}"`);
-  }
+    if (!types.length) return 0;
 
-  return typeMap[type](str);
+    let totalCount = 0;
+
+    for (const type of types) {
+      let countFn = null;
+
+      if (typeMap[type]) {
+        countFn = typeMap[type];
+      } else {
+        try {
+          const regex = new RegExp(type, "gu");
+          countFn = s => (s.match(regex) || []).length;
+        } catch {
+          console.warn(`Invalid type ignored: ${type}`);
+          continue;
+        }
+      }
+
+      totalCount += countFn(str);
+    }
+
+    return totalCount;
+
   } catch (err) {
-      console.error($.simulateErrorDetails(err));
+    console.error($.simulateErrorDetails(err));
+    return 0;
   }
-}
-
-
-
-// Get error line location 
-$.getErrorLocation = function(err) {
-  if (!err?.stack) return 'unknown line';
-
-  const currentUrl = window.location.href.split('?')[0];
-  const line = err.stack.split('\n').find(l => l.includes(currentUrl));
-
-  const match = line?.match(/:(\d+):(\d+)\)?$/);
-  if (!match) return 'unknown line';
-
-  return `line ${match[1]}, column ${match[2]}`;
-}
+};
 
 
 // Simulate live catch error details 
  $.simulateErrorDetails = function(err) {
-  const location = $.getErrorLocation(err);
-  const errorName = err.name || 'Error'; // e.g., "TypeError"
+ const error =  (err.stack).toString().split('at');
+ const lastStackLine = error[error.length - 1];
+ const locationParts = lastStackLine.toString().split(':');
+ const errorName = err.name || 'Error';
   const message = err.message || 'Unknown issue';
-
-  return `${errorName}: ${message}\n→ custom error on ${location}`;
+ const line = locationParts[locationParts.length - 2];
+ const column = locationParts[locationParts.length - 1];
+ return `${errorName}: ${message}\n→ custom error on line ${line}, column ${column}`;
 }
-
 
 
 // Removes specified character types from the string.
-$.removeStr = function(element, ...filters) {
-try {
-  const filterMap = {
-    emoji: s => s.replace(/[\p{Extended_Pictographic}\u200d]+/gu, ''),    
-    number: s => s.replace(/[0-9]/g, ''),
-    num: s => s.replace(/[0-9]/g, ''),    
-    lowercase: s => s.replace(/[a-z]/g, ''),
-    lower: s => s.replace(/[a-z]/g, ''),   
-    uppercase: s => s.replace(/[A-Z]/g, ''),
-    upper: s => s.replace(/[A-Z]/g, ''),   
-    alphabet: s => s.replace(/[a-zA-Z]/g, ''),
-    alpha: s => s.replace(/[a-zA-Z]/g, ''),   
-    special: s => s.replace(/[^a-zA-Z0-9\p{Extended_Pictographic}\u200d\s]/gu, ''),    
-    specialcharacter: s => s.replace(/[^a-zA-Z0-9\p{Extended_Pictographic}\u200d\s]/gu, ''),
-  };
+$.removeStr = function (element, ...filters) {
+  try {
+    const filterMap = {
+      emoji: s => s.replace(/[\p{Extended_Pictographic}\u200d]+/gu, ''),    
+      number: s => s.replace(/[0-9]/g, ''),
+      num: s => s.replace(/[0-9]/g, ''),    
+      lowercase: s => s.replace(/[a-z]/g, ''),
+      lower: s => s.replace(/[a-z]/g, ''),   
+      uppercase: s => s.replace(/[A-Z]/g, ''),
+      upper: s => s.replace(/[A-Z]/g, ''),   
+      alphabet: s => s.replace(/[a-zA-Z]/g, ''),
+      alpha: s => s.replace(/[a-zA-Z]/g, ''),   
+      special: s => s.replace(/[^a-zA-Z0-9\p{Extended_Pictographic}\u200d\s]/gu, ''),    
+      specialcharacter: s => s.replace(/[^a-zA-Z0-9\p{Extended_Pictographic}\u200d\s]/gu, ''),
+    };
 
-  let result = element.toString();
+    let result = element?.toString?.() ?? '';
 
-  for (const filter of filters) {
-    const fn = filterMap[filter];
-    if (!fn) throw new TypeError(`Invalid filter: ${filter}`);
-    result = fn(result);
-  }
+    // ✅ Build function list (support custom regex too)
+    const removeFuncs = filters.map(f => {
+      if (filterMap[f]) return filterMap[f]; // predefined filter
 
-  return result;
+      // Try to interpret custom regex (string or literal)
+      try {
+        const regex = new RegExp(f, 'gu');
+        return s => s.replace(regex, '');
+      } catch {
+        console.warn(`Invalid filter ignored: ${f}`);
+        return null;
+      }
+    }).filter(Boolean);
+
+    // ✅ Apply all filters
+    for (const fn of removeFuncs) {
+      result = fn(result);
+    }
+
+    return [...result];
+
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+    console.error($.simulateErrorDetails(err));
+    return element?.toString?.() ?? '';
   }
-}
+};
 
 
 
 // Extracts and returns characters from the string based on specified filters.
-$.extractStr = function(element, ...filters) { 
-try {
-  const filterMap = {
-    emoji: c => /[\p{Extended_Pictographic}\u200d]/u.test(c),   
-    number: c => /[0-9]/.test(c),
-    num: c => /[0-9]/.test(c),   
-    lowercase: c => /[a-z]/.test(c),
-    lower: c => /[a-z]/.test(c),   
-    uppercase: c => /[A-Z]/.test(c),
-    upper: c => /[A-Z]/.test(c),    
-    alphabet: c => /[a-zA-Z]/.test(c),
-    alpha: c => /[a-zA-Z]/.test(c),   
-    special: s => /[^a-zA-Z0-9\p{Extended_Pictographic}\u200d\s]/u.test(s),   
-    specialcharacter: s => /[^a-zA-Z0-9\p{Extended_Pictographic}\u200d\s]/u.test(s),
-  };
+$.extractStr = function (element, ...filters) {
+  try {
+    const filterMap = {
+      emoji: c => /[\p{Extended_Pictographic}\u200d]/u.test(c),
+      number: c => /[0-9]/.test(c),
+      num: c => /[0-9]/.test(c),
+      lowercase: c => /[a-z]/.test(c),
+      lower: c => /[a-z]/.test(c),
+      uppercase: c => /[A-Z]/.test(c),
+      upper: c => /[A-Z]/.test(c),
+      alphabet: c => /[a-zA-Z]/.test(c),
+      alpha: c => /[a-zA-Z]/.test(c),
+      special: s => /[^a-zA-Z0-9\p{Extended_Pictographic}\u200d\s]/u.test(s),
+      specialcharacter: s => /[^a-zA-Z0-9\p{Extended_Pictographic}\u200d\s]/u.test(s),
+    };
 
-  if (!filters.every(f => filterMap[f])) {
-    throw new TypeError(`Invalid filter(s): ${filters}`);
+    // ✅ Convert filters into usable test functions
+    const filterFuncs = filters.map(f => {
+      if (filterMap[f]) return filterMap[f]; // predefined name
+      try {
+        // Try to interpret as regex
+        const regex = new RegExp(f, 'u');
+        return c => regex.test(c);
+      } catch {
+        console.warn(`Invalid filter ignored: ${f}`);
+        return null;
+      }
+    }).filter(Boolean);
+
+    if (filterFuncs.length === 0) return [];
+
+    // ✅ Apply filters
+    const result = [...element].filter(char =>
+      filterFuncs.some(fn => fn(char))
+    );
+
+    return result; // always safe array
+  } catch (err) {
+    console.error($.simulateErrorDetails(err));
+    return [];
   }
+};
 
-  let result = '';
-  for (const char of element) {
-    if (filters.some(f => filterMap[f](char))) {
-      result += char;
+
+
+
+
+// 💎 $.retainChar(element, charsToKeep, replacement = '', global = false)
+// Strictly retains only specified regex character classes (must be inside [ ])
+// Cleans up emoji fragments / zero-width joiners gracefully to avoid "missing emoji" boxes.
+$.retainChar = function(element, charsToKeep, replacement = '', global = false) {
+  try {
+    const str = element?.toString() ?? '';
+    if (!charsToKeep) return str;
+
+    const flags = (global ? 'g' : '') + 'u'; // add 'u' for Unicode safety
+
+    let pattern;
+
+    // ✅ Only valid if inside [brackets]
+    if (/^\[.*\]$/.test(charsToKeep)) {
+      pattern = `[^${charsToKeep.slice(1, -1)}]`;
+    } else {
+      // treat as literal characters
+      const escaped = charsToKeep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      pattern = `[^${escaped}]`;
     }
-  }
 
-  return result;
+    // Create Unicode-safe regex
+    const regex = new RegExp(pattern, flags);
+
+    // Replace non-matching characters, and clean zero-width joiners or orphan emoji code units
+    return [...str
+      .replace(regex, replacement)
+      .replace(/[\u200D\uFE0F]/gu, '')]; // remove invisible emoji joiners
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+    console.error($.simulateErrorDetails(err));
   }
-}
+};
 
 
+// 💎 $.customCallback(result, callback, joinText)
+// A universal handler for $.string utilities (extractStr, retainChar, removeStr, etc.)
+// - result: string or array output from a $.method
+// - callback: function that receives the joined text or raw string
+// - joinText: optional join config (e.g. { join: ' ' } or a custom string)
+// ✅ Automatically joins arrays, handles objects, and supports chaining safely.
+$.processResult = function(result, callback, joinText) {
+  try {
+    if (typeof callback === 'function') {
+      let matchText;
 
+      // 🧩 Handle arrays with flexible joining logic
+      if (Array.isArray(result)) {
+        if (typeof joinText === 'object' && 'join' in joinText) {
+          matchText = result.join(joinText.join ?? '');
+        } else if (typeof joinText === 'string') {
+          matchText = result.join(joinText);
+        } else {
+          matchText = result.join('');
+        }
+      } 
+      // 🧱 Non-array (string, number, etc.)
+      else {
+        matchText = [...result?.toString?.() ?? ''].join(joinText.join ?? '');
+      }
 
-// Replaces all characters not in the specified set with a replacement string.
-$.retainChar = function(element, charsToKeep, replacement = '', global = true) {
-try {
-  if (!charsToKeep) return this.element.toString(); // nothing to keep
+      // ✅ Return callback result safely
+      return callback(matchText);
+    }
 
-  const flags = global ? 'g' : '';
-  const regex = new RegExp(`[^${charsToKeep}]`, flags);
-
-  return element.toString().replace(regex, replacement);
+    // 💤 No callback provided — return untouched
+    return result;
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+    console.error($.simulateErrorDetails(err));
   }
-}
+};
 
 
   // Clipboard copy text  
@@ -2813,7 +2904,11 @@ $.request = (url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs
 
 // Executes a request function and passes the connection status to a callback
 $.conn = (requestFn, callback) => {
+try {
   requestFn().then(hasConnection => callback(hasConnection));
+  } catch (err) {
+console.error($.simulateErrorDetails(err));
+  }
 };
 
 
@@ -3218,11 +3313,8 @@ $.sanitize = function(input) {
 };
 
 
-
-
-
-
 // Returns true ONLY if all characters strictly belong to the allowed filters
+
 $.isStrict = function (element, ...filters) {
   try {
     if (typeof element !== 'string' || !element.length) return false;
@@ -3242,25 +3334,30 @@ $.isStrict = function (element, ...filters) {
       space: s => /\s/.test(s),
     };
 
-    // Validate provided filters
-    if (!filters.length || !filters.every(f => filterMap[f])) {
-      throw new TypeError(`Invalid filter(s): ${filters}`);
-    }
+    if (!filters.length) return false;
 
-    // Every character must match at least one allowed filter
+    // Normalize filters — allow regex patterns like "[a-z]" or "[0-9]"
+    const filterFns = filters.map(f => {
+      if (filterMap[f]) return filterMap[f];
+      if (/^\[.*\]$/.test(f)) {
+        const pattern = new RegExp(f, 'u');
+        return c => pattern.test(c);
+      }
+      throw new TypeError(`Invalid filter: ${f}`);
+    });
+
+    // Every character must satisfy at least one condition
     for (const char of element) {
-      if (!filters.some(f => filterMap[f](char))) {
-        return false; // if one character doesn't fit, fail immediately
+      if (!filterFns.some(fn => fn(char))) {
+        return false;
       }
     }
 
-    return true; // all characters passed
+    return true;
   } catch (err) {
     console.error($.simulateErrorDetails(err));
   }
 };
-
-
 
 
 // Inserts a character (or string) at a specific index or after a matching substring.
