@@ -37,7 +37,7 @@ if (typeof element === 'string') {
 } else {
   this.element = element;
 }
-}    
+}   
 }
 
 
@@ -65,7 +65,7 @@ return;
 callback(this.element[0]);    
 }  
 } catch(err) {
-console.error($.simulateErrorDetails(err));
+ console.error($.simulateErrorDetails(err)); 
 }
 }
 
@@ -1844,6 +1844,7 @@ cssText(styles, append = false) {
  *   info.overlapHeight {Number}  - actual pixel height of the overlap.
  */
 observeCover(fixedEl, callback) {
+try {
   const self = this;
 
   function checkCover() {
@@ -1891,6 +1892,9 @@ observeCover(fixedEl, callback) {
       window.removeEventListener('resize', checkCover);
     };
   });
+  } catch (err) {
+console.error($.simulateErrorDetails(err));      
+  }
 };
 
 
@@ -2648,6 +2652,25 @@ $.dataStore = function(key, ...data) {
     history.push(...newData);
     localStorage.setItem(key, JSON.stringify(history));
   };
+  
+    // Clear (remove) specific object(s) that match a unique key-value pair
+  history.clear = (criteria) => {  
+    if (!criteria || typeof criteria !== 'object')
+      throw new Error('$.dataStore.clear expects an object like { id: 1 }');
+
+    const [keyName, value] = Object.entries(criteria)[0];    
+    const originalLength = history.length;
+
+    // Filter out only matching objects
+    const filtered = history.filter(item => item[keyName] !== value);
+
+    // If any change occurred, update both memory and storage
+    if (filtered.length !== originalLength) {
+      history.length = 0;
+      history.push(...filtered);
+      localStorage.setItem(key, JSON.stringify(history));
+    }
+    };
 
   return history;
 };
