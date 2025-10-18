@@ -2602,12 +2602,24 @@ $.dataStore = function(key, ...data) {
   }
 
   // Retrieve the value of a specific key from the last item that has it
-  history.get = (keyName) => {
+  history.get = (keyName, criteria) => {
+  if(typeof criteria === 'object') {
+
+    const [critKey, critValue] = Object.entries(criteria)[0];
+
+    const match = history.find(item => item[critKey] === critValue);
+
+    if (!match) return null;
+
+    return keyName in match ? match[keyName] : null;
+  } else {
+  
     let lastValue;
     history.forEach(item => {
       if (item[keyName] !== undefined) lastValue = item[keyName];
     });
     return lastValue !== undefined ? lastValue : null;
+    }
   };
 
   // Count the number of items that have a specific key
@@ -2626,7 +2638,21 @@ $.dataStore = function(key, ...data) {
 
   // Delete a specific key from all items or just the last item that has it
   history.delete = (keyName, all = false) => {
-    if (!keyName) return;
+   if(typeof keyName === 'object') {
+         
+    const [keys, value] = Object.entries(keyName)[0];    
+    const originalLength = history.length;
+
+    // Filter out only matching objects
+    const filtered = history.filter(item => item[keys] !== value);
+
+    // If any change occurred, update both memory and storage
+    if (filtered.length !== originalLength) {
+      history.length = 0;
+      history.push(...filtered);
+      localStorage.setItem(key, JSON.stringify(history));
+    }
+    } else {   
 
     if (all) {
       history.forEach(item => { if (item[keyName] !== undefined) delete item[keyName]; });
@@ -2637,6 +2663,7 @@ $.dataStore = function(key, ...data) {
           break;
         }
       }
+    }
     }
 
     localStorage.setItem(key, JSON.stringify(history));
@@ -2653,25 +2680,6 @@ $.dataStore = function(key, ...data) {
     localStorage.setItem(key, JSON.stringify(history));
   };
   
-    // Clear (remove) specific object(s) that match a unique key-value pair
-  history.clear = (criteria) => {  
-    if (!criteria || typeof criteria !== 'object')
-      throw new Error('$.dataStore.clear expects an object like { id: 1 }');
-
-    const [keyName, value] = Object.entries(criteria)[0];    
-    const originalLength = history.length;
-
-    // Filter out only matching objects
-    const filtered = history.filter(item => item[keyName] !== value);
-
-    // If any change occurred, update both memory and storage
-    if (filtered.length !== originalLength) {
-      history.length = 0;
-      history.push(...filtered);
-      localStorage.setItem(key, JSON.stringify(history));
-    }
-    };
-
   return history;
 };
 
