@@ -1,17 +1,4 @@
-/**
-* A JavaScript Library for DOM Manipulation 
-* Free to use and easy to learn 
-* Make your project faster in development 
-* Release Date(2025-10-08)
- */
- 
- // Release Info
- const version = "0.0.1";
- const release_stage = "Alpha";
- const full_version = `${version}-${release_stage.toLowerCase()}`; 
- 
- 
- // Define the selector function 
+  // Define the selector function 
  function $(element) {
 return new jUtils(element);    
  }
@@ -65,7 +52,7 @@ return;
 callback(this.element[0]);    
 }  
 } catch(err) {
- console.error($.simulateErrorDetails(err)); 
+ $.simulateErrorDetails(err, true); 
 }
 }
 
@@ -92,7 +79,7 @@ return callback(this.element);
  }    
 } 
 } catch(err) {
-console.error($.simulateErrorDetails(err));
+$.simulateErrorDetails(err, true);
 }
 }
 
@@ -234,18 +221,26 @@ return new jUtils(this.element);
 
 
 // Append elements to container
-appendTo(content) {
-this.set((item) => {
-content.append(item);        
+appendTo(selector) {
+this.set((element) => {
+try {
+document.querySelector(selector).append(element);
+} catch {
+selector.append(element);              
+} 
 });       
 return new jUtils(this.element);        
 }
 
 
 // Prepend elements to container 
-prependTo(content) {
-this.set((item) => {
-content.prepend(item);        
+prependTo(selector) {
+this.set((element) => {
+try {
+document.querySelector(selector).prepend(element);
+} catch {
+selector.prepend(element);              
+}         
 });               
 return new jUtils(this.element);         
 }
@@ -1551,7 +1546,7 @@ try {
     throw new TypeError(`Unsupported target: ${target}`);
   }
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+$.simulateErrorDetails(err, true);      
   }
 }
 
@@ -1893,9 +1888,67 @@ try {
     };
   });
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+$.simulateErrorDetails(err, true);      
   }
 };
+
+
+/**
+ * Process files selected by the input element, reading them according to the specified read type.
+ * Calls the callback function with the file processing status and result.
+ * 
+ * @param {function} callback - The callback function to call with the file processing status and result.
+ * @param {string} readType - The type of reading to perform on the file (e.g., 'text', 'url', 'array', 'binary').
+ */
+processFile(callback, readType = 'URL') {
+this.set(inputElement => {
+inputElement.addEventListener('change', (event) => {
+
+const files = event.target.files;
+if(!files) return;
+ Array.from(files).forEach((file) => {
+const reader = new FileReader();
+reader.onload = () => {
+callback({
+    input: event.target,
+    status: 'success',
+    data: reader.result,
+    file: file
+});
+}
+
+reader.onerror = () => {
+callback({
+    input: event.target,
+    status: 'error',
+    data: reader.result,
+    file: file
+});
+}
+
+reader.onprogress = () => {
+callback({
+    input: event.target,
+    status: 'progress',
+    data: reader.result,
+    file: file
+});
+}
+
+const readMethods = {
+  TEXT: 'readAsText',
+  URL: 'readAsDataURL',
+  ARRAY: 'readAsArrayBuffer',
+  BINARY: 'readAsBinaryString',
+};
+
+const method = Object.keys(readMethods).find(key => readType.toString().toUpperCase().includes(key));
+reader[readMethods[method]](file);
+});
+});
+});     
+}
+
 
 
 
@@ -1912,7 +1965,7 @@ $.charCount = function (element, char) {
     const regex = new RegExp(escapedChar, 'g');
     return (str.match(regex) || []).length;
   } catch (err) {
-    console.error($.simulateErrorDetails(err));
+    $.simulateErrorDetails(err, true);   
     return 0;
   }
 };
@@ -1962,22 +2015,26 @@ $.strCount = function (element, ...types) {
     return totalCount;
 
   } catch (err) {
-    console.error($.simulateErrorDetails(err));
+  $.simulateErrorDetails(err, true);
     return 0;
   }
 };
 
 
 // Simulate live catch error details 
- $.simulateErrorDetails = function(err) {
+ $.simulateErrorDetails = function(err, flag = false) {
  const error =  (err.stack).toString().split('at');
- const lastStackLine = error[error.length - 1];
+ const lastStackLine = error[error.length - 1];  
  const locationParts = lastStackLine.toString().split(':');
  const errorName = err.name || 'Error';
-  const message = err.message || 'Unknown issue';
+  const message = err.message || 'Unknown issue'
+ const urlPaths = locationParts[locationParts.length - 3];
+const url = urlPaths.split('/'); 
  const line = locationParts[locationParts.length - 2];
  const column = locationParts[locationParts.length - 1];
- return `${errorName}: ${message}\n→ custom error on line ${line}, column ${column}`;
+const errDetails = `${errorName}: ${message}\n→ custom error on line ${line}, column ${column} at file ${url[1]}`; 
+ if(flag) console.error(errDetails);
+return errDetails;
 }
 
 
@@ -2022,7 +2079,7 @@ $.removeStr = function (element, ...filters) {
     return [...result];
 
   } catch (err) {
-    console.error($.simulateErrorDetails(err));
+    $.simulateErrorDetails(err, true);   
     return element?.toString?.() ?? '';
   }
 };
@@ -2068,7 +2125,7 @@ $.extractStr = function (element, ...filters) {
 
     return result; // always safe array
   } catch (err) {
-    console.error($.simulateErrorDetails(err));
+    $.simulateErrorDetails(err, true);   
     return [];
   }
 };
@@ -2106,7 +2163,7 @@ $.retainChar = function(element, charsToKeep, replacement = '', global = false) 
       .replace(regex, replacement)
       .replace(/[\u200D\uFE0F]/gu, '')]; // remove invisible emoji joiners
   } catch (err) {
-    console.error($.simulateErrorDetails(err));
+    $.simulateErrorDetails(err, true);   
   }
 };
 
@@ -2144,7 +2201,7 @@ $.processResult = function(result, callback, joinText) {
     // 💤 No callback provided — return untouched
     return result;
   } catch (err) {
-    console.error($.simulateErrorDetails(err));
+    $.simulateErrorDetails(err, true);   
   }
 };
 
@@ -2177,7 +2234,7 @@ try {
  document.body.removeChild(textarea);
     }
     } catch (err) {
-console.error($.simulateErrorDetails(err));        
+$.simulateErrorDetails(err, true);           
     }
    }
          
@@ -2206,7 +2263,7 @@ $.upper = function(element) {
 try {
 return element.toUpperCase(); 
 } catch (err) {
-   console.error($.simulateErrorDetails(err));
+   $.simulateErrorDetails(err, true);   
 }
 }
 
@@ -2216,7 +2273,7 @@ $.lower = function(element) {
 try {
 return element.toLowerCase();  
 } catch (err) {
-console.error($.simulateErrorDetails(err));
+$.simulateErrorDetails(err, true);   
 }
 }
 
@@ -2237,7 +2294,7 @@ $.swapCase = function(value) {
 try {
 return value === value.toUpperCase() ? value.toLowerCase() : value.toUpperCase();  
 } catch (err) {
-console.error($.simulateErrorDetails(err));
+$.simulateErrorDetails(err, true);   
 }
 }  
   
@@ -2253,7 +2310,7 @@ $.parse = function(content) {
 try {
 return JSON.parse(content);    
 } catch (err) {
-console.error($.simulateErrorDetails(err));    
+$.simulateErrorDetails(err, true);       
 }
 }
 
@@ -2270,7 +2327,7 @@ try {
     return String(aValue).localeCompare(String(bValue));
   });
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+$.simulateErrorDetails(err, true);        
   }
 };
 
@@ -2286,7 +2343,7 @@ try {
     return String(bValue).localeCompare(String(aValue));
   });
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+$.simulateErrorDetails(err, true);         
   }
 };
 
@@ -2354,7 +2411,7 @@ try {
 
   return myDate.toLocaleString(format, { month: type });
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+$.simulateErrorDetails(err, true);        
   }
 };
 
@@ -2384,7 +2441,7 @@ try {
 
   return myDate.toLocaleString(format, { weekday: type });
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+$.simulateErrorDetails(err, true);         
   }
 };
 
@@ -2413,7 +2470,7 @@ try {
     (Array.isArray(value) && value.length === 0)
   );
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+$.simulateErrorDetails(err, true);         
   }
 }
 
@@ -2474,7 +2531,7 @@ try {
         return;
     }
 } catch (err) {
-console.error($.simulateErrorDetails(err));     
+$.simulateErrorDetails(err, true);       
     }
 }
 
@@ -2508,7 +2565,7 @@ $.interval = function(callback, delay = 0) {
             return;
         }
     } catch (err) {
-        console.error($.simulateErrorDetails(err));
+   $.simulateErrorDetails(err, true);   
     }
 }
 
@@ -2541,7 +2598,7 @@ $.storage = function(key, value) {
             localStorage.setItem(key, value);
         }
     } catch (err) {
-        console.error($.simulateErrorDetails(err));
+  $.simulateErrorDetails(err, true);   
     }
 }
 
@@ -2574,115 +2631,116 @@ $.session = function(key, value) {
             sessionStorage.setItem(key, value);
         }
     } catch (err) {
-        console.error($.simulateErrorDetails(err));
+  $.simulateErrorDetails(err, true);   
     }
 }
 
 
-
-
-
-// Custom dataStore for localStorage 
-$.dataStore = function(key, ...data) {
-  if (!key) throw new Error('A key must be provided for $.dataStore');
-
+$.dataStore = function (key) {
+ if (!key) throw new Error('A key must be provided for $.dataStore');
+ 
   // Retrieve existing history or initialize as array
   let history = JSON.parse(localStorage.getItem(key)) || [];
   if (!Array.isArray(history)) history = [history];
 
-  // Add new data if provided
-  if (data.length > 0) {
-    if (!data.every(d => typeof d === 'object')) {
-      throw new Error(
-        `Invalid typeof data "${typeof data}". $.dataStore expects objects or arrays of objects.`
-      );
-    }
-    history.push(...data);
-    localStorage.setItem(key, JSON.stringify(history));
+  // Helper: save back to localStorage        
+  history.init = function (array = history) {
+localStorage.setItem(key, JSON.stringify(array));        
+  }
+    
+  history.add = function (...data) {
+history.push(...data); 
+history.init();   
+  }
+          
+  
+  history.del = function (keyFunction = () => {}, fields) {
+const filterData = history.filter(keyFunction);
+
+filterData.forEach(filterResult => {
+if(typeof fields === "string" || Array.isArray(fields)) {
+const splitFields = fields.toString().trim().split(',');
+splitFields.forEach(item => {
+    delete filterResult[item.trim()];
+    history.init();
+});   
+} else if(fields === undefined) {
+filterData.forEach((key) => {
+for(const item in key){
+ delete key[item]; 
+ history.init(); 
+}
+}); 
+} else {
+    throw new Error("$.dataStore requires a string or array or undefined");
+}
+// Update the history data storage and filter out any {} empty object 
+const filterHistory = history.filter(item => !$.empty(item));
+history.init(filterHistory); 
+}); 
+  }
+    
+   
+  // ✅ FIXED MODIFY METHOD  
+      history.modify = function (keyFunction = () => {}, ...data) {
+ const filterData = history.filter(keyFunction);
+
+filterData.forEach(filterResult => {
+Object.entries(...data).forEach(([key, value]) => {  
+filterResult[key] = value;
+    history.init();
+});
+});
+      }      
+                                        
+  
+  history.get = function (keyFunction = () => {}, fields, format) {
+  const matches = history.filter(keyFunction);
+
+  // If no format provided, return full matching items
+  if (!format) {
+    return matches;
   }
 
-  // Retrieve the value of a specific key from the last item that has it
-  history.get = (keyName, criteria) => {
-  if(typeof criteria === 'object') {
+  const upperFormat = format.toUpperCase();
 
-    const [critKey, critValue] = Object.entries(criteria)[0];
-
-    const match = history.find(item => item[critKey] === critValue);
-
-    if (!match) return null;
-
-    return keyName in match ? match[keyName] : null;
-  } else {
+  return matches.map(item => {
   
-    let lastValue;
-    history.forEach(item => {
-      if (item[keyName] !== undefined) lastValue = item[keyName];
-    });
-    return lastValue !== undefined ? lastValue : null;
-    }
-  };
-
-  // Count the number of items that have a specific key
-  history.count = (keyName) => {
-    if (keyName) {
-      return history.filter(item => item[keyName] !== undefined).length;
-    }
-    return history.length;
-  };
-
-  // Remove the stored data entirely
-  history.empty = () => {
-    localStorage.removeItem(key);
-    history.length = 0;
-  };
-
-  // Delete a specific key from all items or just the last item that has it
-  history.delete = (keyName, all = false) => {
-   if(typeof keyName === 'object') {
-         
-    const [keys, value] = Object.entries(keyName)[0];    
-    const originalLength = history.length;
-
-    // Filter out only matching objects
-    const filtered = history.filter(item => item[keys] !== value);
-
-    // If any change occurred, update both memory and storage
-    if (filtered.length !== originalLength) {
-      history.length = 0;
-      history.push(...filtered);
-      localStorage.setItem(key, JSON.stringify(history));
-    }
-    } else {   
-
-    if (all) {
-      history.forEach(item => { if (item[keyName] !== undefined) delete item[keyName]; });
-    } else {
-      for (let i = history.length - 1; i >= 0; i--) {
-        if (history[i][keyName] !== undefined) {
-          delete history[i][keyName];
-          break;
-        }
-      }
-    }
+    if (upperFormat.includes('OBJECT')) {
+      // Return only the specified fields as an object
+      const splitFields = fields.toString().trim().split(',');
+      if (fields.length === 0) return item;
+      const obj = {};
+      splitFields.forEach(field => {         
+        obj[field] = item[field.trim()];
+      });
+      return obj;
+    } 
+    
+    if (upperFormat.includes('ARRAY')) {
+      // Return only the specified fields as an array
+      const splitFields = fields.toString().trim().split(',');
+      if (fields.length === 0) return Object.values(item);      
+      return splitFields.map(field => item[field.trim()]);
     }
 
-    localStorage.setItem(key, JSON.stringify(history));
-  };
-
-  // Add new data to history array
-  history.set = (...newData) => {
-    if (!newData.every(d => typeof d === 'object')) {
-      throw new Error(
-        `Invalid typeof data "${typeof newData}". $.dataStore expects objects or arrays of objects.`
-      );
-    }
-    history.push(...newData);
-    localStorage.setItem(key, JSON.stringify(history));
-  };
-  
-  return history;
+    // Default: if format not recognized, return the full item
+    return item;
+  });
 };
 
+
+history.count = function (keyFunction = () => {}) {
+return history.filter(keyFunction).length; 
+}
+
+
+history.empty = function () {
+localStorage.removeItem(key);
+    history.length = 0;
+}   
+  return history;   
+}
 
 
 // Custom AJAX request
@@ -2877,7 +2935,7 @@ try {
 
     return fd;
     } catch (err) {
-console.error($.simulateErrorDetails(err));        
+$.simulateErrorDetails(err, true);          
     }
 };
 
@@ -2995,7 +3053,7 @@ $.conn = (requestFn, callback) => {
 try {
   requestFn().then(hasConnection => callback(hasConnection));
   } catch (err) {
-console.error($.simulateErrorDetails(err));
+$.simulateErrorDetails(err, true);   
   }
 };
 
@@ -3300,7 +3358,7 @@ $.alert = (html = '', btnText = 'OK') => {
       border-radius: 0px;
       width: 80%;
       max-width: 500px;
-      min-height: 150px;
+      min-height: 180px;
       max-height: calc(100vh - 90px);
       display: flex;
       flex-direction: column;
@@ -3443,7 +3501,7 @@ $.isStrict = function (element, ...filters) {
 
     return true;
   } catch (err) {
-    console.error($.simulateErrorDetails(err));
+ $.simulateErrorDetails(err, true);   
   }
 };
 
@@ -3471,7 +3529,7 @@ try {
   // Construct and return the new string
   return text.slice(0, slicePoint) + char + text.slice(slicePoint);
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+$.simulateErrorDetails(err, true);         
   }
 }
 
@@ -3573,7 +3631,7 @@ throw new TypeError("The text must start with either '#' (hash), '/' (pathname),
   window.history.pushState(state, title, loc.href);
   document.title = title;
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+$.simulateErrorDetails(err, true);         
   }
 };
 
@@ -3615,7 +3673,7 @@ $.updateUrl = function(part, value) {
     }
   } catch (err) {
     // Catch any error (invalid key, readonly property, etc.)
-    console.error($.simulateErrorDetails(err));
+ $.simulateErrorDetails(err, true);   
     return null;
   }
 };
@@ -3751,7 +3809,7 @@ try {
     }
   };
   } catch (err) {
-console.error($.simulateErrorDetails(err));      
+$.simulateErrorDetails(err, true);         
   }
 };
 
@@ -3851,3 +3909,5 @@ body: JSON.stringify(data)
     options.error(err);
 })    
 }
+
+
